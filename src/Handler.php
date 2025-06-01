@@ -2,54 +2,81 @@
 
 namespace RaifuCore\TelegramLogger;
 
-use Exception;
+use Illuminate\Support\Facades\Log;
 use Monolog\Formatter\FormatterInterface;
 use Monolog\Formatter\LineFormatter;
-use Monolog\Logger;
+use Monolog\Level;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\LogRecord;
+use Throwable;
 
 class Handler extends AbstractProcessingHandler
 {
-    private array $config;
-    private string $botToken;
-    private int $chatId;
-    private int|null $messageThreadId;
-    private string $appName;
-    private string $appEnv;
+    const TELEGRAM_API_HOST = 'https://api.telegram.org';
+
+    private array $config = [];
+    private bool $isEnable = false;
+
+    private string|null $token = null;
+    private int|null $chatId = null;
+    private int|null $messageThreadId = null;
+    private string|null $template = null;
+    private array $options = [];
 
     public function __construct(array $config)
     {
-        $level = Logger::toMonologLevel($config['level']);
+        parent::__construct($config['level']);
 
-        parent::__construct($level);
+        $this->config = config('telegram_logger');
 
-        // define variables for making Telegram request
-        $this->config           = $config;
-        $this->botToken         = $this->getConfigValue('token');
-        $this->chatId           = $this->getConfigValue('chat_id');
-        $this->messageThreadId  = $this->getConfigValue('message_thread_id');
-
-        // define variables for text message
-        $this->appName = config('app.name');
-        $this->appEnv  = config('app.env');
+        $this->isEnable = (bool)$this->config['enable'] ?? null;
     }
 
-    public function write($record): void
+    private function _determineParams(LogRecord|array $record): void
     {
-        if (!$this->botToken || !$this->chatId) {
-            throw new \InvalidArgumentException('Bot token or chat id is not defined for Telegram logger');
+        $level = $record instanceof LogRecord
+            ? $record->level
+            : ($record['level'] ?? Level::Debug);
+
+        $this->token = $this->config['levels'][$level->toPsrLogLevel()]['token']
+            ?? $this->config['token'];
+
+        $this->chatId = $this->config['levels'][$level->toPsrLogLevel()]['chat_id']
+            ?? $this->config['chat_id'];
+
+        $this->messageThreadId = $this->config['levels'][$level->toPsrLogLevel()]['message_thread_id']
+            ?? $this->config['message_thread_id'];
+
+        $this->template = $this->config['levels'][$level->toPsrLogLevel()]['template']
+            ?? $this->config['template'];
+
+        $this->options = array_merge(
+            ['parse_mode' => 'html'],
+            $this->config['options'] ?? [],
+            $this->config['levels'][$level->toPsrLogLevel()]['options'] ?? []
+        );
+
+        if (!$this->token || !$this->chatId) {
+            throw new \InvalidArgumentException('token and chat_id are not defined');
+        }
+    }
+
+    public function write(LogRecord|array $record): void
+    {
+        if (!$this->isEnable) {
+            return;
         }
 
-        // trying to make request and send notification
+        $this->_determineParams($record);
+
         try {
             $textChunks = str_split($this->formatText($record), 4096);
 
             foreach ($textChunks as $textChunk) {
                 $this->sendMessage($textChunk);
             }
-        } catch (Exception $exception) {
-            \Log::channel('single')->error($exception->getMessage());
+        } catch (Throwable $e) {
+            Log::channel('single')->error($e->getMessage());
         }
     }
 
@@ -60,45 +87,46 @@ class Handler extends AbstractProcessingHandler
 
     private function formatText($record): string
     {
-        if ($template = config('telegram_logger.template')) {
+        $appName = config('app.name');
+        $appEnv = config('app.env');
+
+        if ($this->template) {
             if ($record instanceof LogRecord) {
-                return view($template, array_merge($record->toArray(), [
-                        'appName'   => $this->appName,
-                        'appEnv'    => $this->appEnv,
+                return view($this->template, array_merge($record->toArray(), [
+                        'appName' => $appName,
+                        'appEnv' => $appEnv,
                         'formatted' => $record->formatted,
                     ])
                 )->render();
             }
 
-            return view($template, array_merge($record, [
-                    'appName' => $this->appName,
-                    'appEnv'  => $this->appEnv,
+            return view($this->template, array_merge($record, [
+                    'appName' => $appName,
+                    'appEnv' => $appEnv,
                 ])
             )->render();
         }
 
-        return sprintf("<b>%s</b> (%s)\n%s", $this->appName, $record['level_name'], $record['formatted']);
+        return sprintf("<b>%s</b> (%s)\n%s", $appName, $record['level_name'], $record['formatted']);
     }
 
     private function sendMessage(string $text): void
     {
         $httpQuery = http_build_query(array_merge(
             [
-                'text'               => $text,
-                'chat_id'            => $this->chatId,
-                'message_thread_id'  => $this->messageThreadId,
-                'parse_mode'         => 'html',
+                'text' => $text,
+                'chat_id' => $this->chatId,
+                'message_thread_id' => $this->messageThreadId,
+                'parse_mode' => 'html',
             ],
-            config('telegram-logger.options', [])
+            $this->options
         ));
 
-        $host = $this->getConfigValue('api_host');
+        $url = self::TELEGRAM_API_HOST . '/bot' . $this->token . '/sendMessage?' . $httpQuery;
 
-        $url = $host . '/bot' . $this->botToken . '/sendMessage?' . $httpQuery;
+        $proxy = $this->config['proxy'] ?? null;
 
-        $proxy = $this->getConfigValue('proxy');
-
-        if (!empty($proxy)) {
+        if ($proxy) {
             $context = stream_context_create([
                 'http' => [
                     'proxy' => $proxy,
@@ -108,14 +136,5 @@ class Handler extends AbstractProcessingHandler
         } else {
             file_get_contents($url);
         }
-    }
-
-    private function getConfigValue(string $key): mixed
-    {
-        if (isset($this->config[$key])) {
-            return $this->config[$key];
-        }
-
-        return config("telegram-logger.$key");
     }
 }

@@ -8,12 +8,20 @@ Send logs to Telegram chat via Telegram bot
 composer require raifucore/laravel-telegram-logger
 ```
 
-Define Telegram Bot Token and chat id (users telegram id) and set as environment parameters.
+Publish config file and views
+```
+php artisan vendor:publish --provider "RaifuCore\TelegramLogger\ServiceProvider"
+```
+
+Define Telegram Token and ChatId (users telegram id) and set as environment parameters
 Add to <b>.env</b> 
 
 ```
-TELEGRAM_LOGGER_BOT_TOKEN=id:token
-TELEGRAM_LOGGER_CHAT_ID=chat_id
+### TELEGRAM_LOGGER ##########################################################
+TELEGRAM_LOGGER_ENABLE=true
+TELEGRAM_LOGGER_BOT_TOKEN=7123456789:ABHo3qcH6G1wMi4VPc8xxZZ474UizrF5e6Dk
+TELEGRAM_LOGGER_CHAT_ID=-1112223334445
+TELEGRAM_LOGGER_MESSAGE_THREAD_ID=
 ```
 
 
@@ -38,23 +46,6 @@ If your default log channel is a stack, you can add it to the <b>stack</b> chann
 Or you can simply change the default log channel in the .env 
 ```
 LOG_CHANNEL=telegram
-```
-
-Publish config file and views
-```
-php artisan vendor:publish --provider "Logger\TelegramLoggerServiceProvider"
-```
-
-## Telegram Logging Formats
-
-You can choose among two different formats that you can specify in the `.env` file like this :
-
-```
-# Use a minimal log template
-TELEGRAM_LOGGER_TEMPLATE = laravel-telegram-logging::minimal
-
-# Or use the backward compatible one (default setting used even without inserting this row)
-TELEGRAM_LOGGER_TEMPLATE = laravel-telegram-logging::standard
 ```
 
 It is possible to create other blade templates and reference them in the `TELEGRAM_LOGGER_TEMPLATE` entry 

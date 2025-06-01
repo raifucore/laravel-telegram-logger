@@ -1,0 +1,32 @@
+{
+    "name": "raifucore/laravel-telegram-logger",
+    "version": "1.0.1",
+    "description": "Send logs to Telegram",
+    "authors": [
+        {
+            "name": "RaifuCore ライフ",
+            "email": "RaifuScripts@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "RaifuCore\\TelegramLogger\\": "src"
+        }
+    },
+    "require": {
+        "php": "^8.1",
+        "monolog/monolog": "^3.0",
+        "illuminate/support": "^10.0|^11.0|^12.0"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "extra": {
+        "laravel": {
+            "providers": [
+                "RaifuCore\\TelegramLogger\\ServiceProvider"
+            ]
+        }
+    }
+}

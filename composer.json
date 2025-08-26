@@ -1,6 +1,6 @@
 {
     "name": "raifucore/laravel-telegram-logger",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Send logs to Telegram",
     "authors": [
         {
@@ -18,7 +18,7 @@
     "require": {
         "php": "^8.1",
         "monolog/monolog": "^3.0",
-        "illuminate/support": "^10.0|^11.0|^12.0"
+        "laravel/framework": "^10.0|^11.0|^12.0"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

@@ -1,127 +1,141 @@
-# Laravel Telegram logger
+# Laravel Telegram Logger
 
-Send logs to Telegram chat via Telegram bot
+Send Laravel logs to Telegram chat via Telegram Bot API.
 
 ## Install
 
-```
+```bash
 composer require raifucore/laravel-telegram-logger
 ```
 
-Publish config file and views
-```
-php artisan vendor:publish --provider "RaifuCore\TelegramLogger\ServiceProvider"
+Publish package config and views:
+
+```bash
+php artisan vendor:publish --provider="RaifuCore\TelegramLogger\ServiceProvider"
 ```
 
-Define Telegram Token and ChatId (users telegram id) and set as environment parameters
-Add to <b>.env</b> 
+## Configure environment
 
-```
-### TELEGRAM_LOGGER ##########################################################
+Add these variables to your `.env`:
+
+```dotenv
 TELEGRAM_LOGGER_ENABLE=true
 TELEGRAM_LOGGER_BOT_TOKEN=7123456789:ABHo3qcH6G1wMi4VPc8xxZZ474UizrF5e6Dk
 TELEGRAM_LOGGER_CHAT_ID=-1112223334445
 TELEGRAM_LOGGER_MESSAGE_THREAD_ID=
+
+TELEGRAM_LOGGER_QUEUE=default
+TELEGRAM_LOGGER_QUEUE_CONNECTION=sync
+TELEGRAM_LOGGER_TIMEOUT=5
+
+# optional
+TELEGRAM_LOGGER_PROXY=
 ```
 
+### Variables
 
-Add to <b>config/logging.php</b> file new channel:
+- `TELEGRAM_LOGGER_ENABLE`: enable or disable telegram logging.
+- `TELEGRAM_LOGGER_BOT_TOKEN`: Telegram bot token from `@BotFather`.
+- `TELEGRAM_LOGGER_CHAT_ID`: target chat id.
+- `TELEGRAM_LOGGER_MESSAGE_THREAD_ID`: optional topic id for forum chats.
+- `TELEGRAM_LOGGER_QUEUE`: queue name for log delivery jobs.
+- `TELEGRAM_LOGGER_QUEUE_CONNECTION`: queue connection (`sync`, `redis`, etc.).
+- `TELEGRAM_LOGGER_TIMEOUT`: HTTP timeout (seconds) for Telegram API calls.
+- `TELEGRAM_LOGGER_PROXY`: optional proxy URL, for example:
+    - `tcp://host:port`
+    - `tcp://user:pass@host:port`
+    - `socks5://user:pass@host:port`
+
+## Configure `config/logging.php`
+
+Add a custom channel:
 
 ```php
 'telegram' => [
     'driver' => 'custom',
-    'via'    => Logger\TelegramLogger::class,
-    'level'  => 'debug',
-]
+    'via' => \RaifuCore\TelegramLogger\Logger::class,
+    'level' => 'debug',
+],
 ```
 
-If your default log channel is a stack, you can add it to the <b>stack</b> channel like this
+If your default channel is `stack`, add `telegram` there:
+
 ```php
 'stack' => [
     'driver' => 'stack',
     'channels' => ['single', 'telegram'],
-]
+],
 ```
 
-Or you can simply change the default log channel in the .env 
-```
+Or set default channel:
+
+```dotenv
 LOG_CHANNEL=telegram
 ```
 
-It is possible to create other blade templates and reference them in the `TELEGRAM_LOGGER_TEMPLATE` entry 
+## Usage
 
-## Create bot
+Use Laravel `Log` as usual:
 
-For using this package you need to create Telegram bot
-
-1. Go to @BotFather in the Telegram
-2. Send ``/newbot``
-3. Set up name and bot-name for your bot.
-4. Get token and add it to your .env file (it is written above)
-5. Go to your bot and send ``/start`` message
-
-## Change log template at runtime
-
-1. Change config for template.
 ```php
-config(['telegram-logger.template'=>'laravel-telegram-logging::custom'])
+use Illuminate\Support\Facades\Log;
+
+Log::error('Payment failed', ['order_id' => 123]);
+Log::channel('telegram')->warning('Telegram channel only');
 ```
-2. Use `Log` as usual.
 
-## Configuring a different chat id or token per channel
+## Queue behavior
 
-1. Add `chat_id` or `token` to channels in `config/logging.php`.  Overrides `config('telegram.chat_id')`.
+Messages are dispatched as jobs (`RaifuCore\TelegramLogger\Job`).
+
+- With `TELEGRAM_LOGGER_QUEUE_CONNECTION=sync`, jobs are executed immediately.
+- With async connections (for example `redis`), jobs are pushed to queue workers.
+
+## Templates
+
+By default package uses Blade template:
+
 ```php
-[
-    'channels' => [
-        [
-            'company' => [
-                'driver' => 'custom',
-                'via' => TelegramLogger::class,
-                'chat_id' => env('TELEGRAM_COMPANY_CHAT_ID'),
-                'token' => env('TELEGRAM_COMPANY_BOT_TOKEN'),
-                'level' => 'debug'
-            ],
-
-            'operations' => [
-                'driver' => 'custom',
-                'via' => TelegramLogger::class,
-                'chat_id' => env('TELEGRAM_OPERATIONS_CHAT_ID'),
-                'token' => env('TELEGRAM_OPERATIONS_BOT_TOKEN'),
-                'level' => 'debug'
-            ]
-        ]
-    ]
-]
+'template' => 'telegram_logger::standard',
 ```
 
-2. Use `Log` as usual.
-## Lumen support
+To customize templates:
 
-To make it work with Lumen, you need also run two steps:
+1. Publish package views.
+2. Create your own template in `resources/views/vendor/telegram_logger/`.
+3. Set `template` in `config/telegram_logger.php` or at runtime:
 
-1. Place config/telegram-logger.php file with following code:
 ```php
-<?php
-
-return [
-    // Telegram logger bot token
-    'token' => env('TELEGRAM_LOGGER_BOT_TOKEN'),
-
-    // Telegram chat id
-    'chat_id' => env('TELEGRAM_LOGGER_CHAT_ID'),
-    
-    // you can define your custom template for message
-    // e.g: logging.template
-    // 'template' => 'some your view path'
-];
+config(['telegram_logger.template' => 'telegram_logger::minimal']);
 ```
 
-2. Uncomment ```$app->withFacades();``` and configure the file ```$app->configure('telegram-logger');``` at bootstrap/app.php
-3. Place default Laravel/Lumen logging file to config/logging.php (to add new channel).
+## Per-level overrides
 
-## Proxy support
-To use a proxy server, set the variable in the .env
+You can override parameters per log level in `config/telegram_logger.php`:
+
+```php
+'levels' => [
+    'error' => [
+        'chat_id' => env('TELEGRAM_LOGGER_ERROR_CHAT_ID'),
+        'options' => [
+            'disable_notification' => true,
+        ],
+    ],
+],
 ```
-TELEGRAM_LOGGER_PROXY=proxy_server.com:port
-```
+
+Supported keys per level:
+
+- `token`
+- `chat_id`
+- `message_thread_id`
+- `template`
+- `options`
+
+## Create Telegram bot
+
+1. Open `@BotFather`.
+2. Run `/newbot`.
+3. Configure bot name and username.
+4. Copy token to `.env`.
+5. Open your bot and send `/start`.

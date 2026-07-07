@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'enable' => env('TELEGRAM_LOGGER_ENABLE'),
+    'enable' => env('TELEGRAM_LOGGER_ENABLE', false),
     'token' => env('TELEGRAM_LOGGER_BOT_TOKEN'),
     'chat_id' => env('TELEGRAM_LOGGER_CHAT_ID'),
     'message_thread_id' => env('TELEGRAM_LOGGER_MESSAGE_THREAD_ID'),
@@ -16,8 +16,15 @@ return [
         // 'disable_notification' => false
     ],
 
-    // Proxy. Ex.: tcp://host:port or tcp://user:pass@host:port
+    // Proxy. Ex.: tcp://host:port or tcp://user:pass@host:port or socks5://user:pass@host:port
     'proxy' => null,
+
+    // Queue settings for telegram logger jobs
+    'queue' => env('TELEGRAM_LOGGER_QUEUE', 'default'),
+    'connection' => env('TELEGRAM_LOGGER_QUEUE_CONNECTION', 'sync'),
+
+    // HTTP timeout (seconds) for Telegram API requests
+    'timeout' => (int) env('TELEGRAM_LOGGER_TIMEOUT', 5),
 
     'levels' => [
         /**

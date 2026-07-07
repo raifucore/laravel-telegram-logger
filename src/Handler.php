@@ -29,7 +29,7 @@ class Handler extends AbstractProcessingHandler
 
         $this->config = config('telegram_logger');
 
-        $this->isEnable = (bool)$this->config['enable'] ?? null;
+        $this->isEnable = (bool) ($this->config['enable'] ?? null);
     }
 
     private function _determineParams(LogRecord|array $record): void
@@ -38,22 +38,24 @@ class Handler extends AbstractProcessingHandler
             ? $record->level
             : ($record['level'] ?? Level::Debug);
 
-        $this->token = $this->config['levels'][$level->toPsrLogLevel()]['token']
+        $psrLogLevel = $level->toPsrLogLevel();
+
+        $this->token = $this->config['levels'][$psrLogLevel]['token']
             ?? $this->config['token'];
 
-        $this->chatId = $this->config['levels'][$level->toPsrLogLevel()]['chat_id']
+        $this->chatId = $this->config['levels'][$psrLogLevel]['chat_id']
             ?? $this->config['chat_id'];
 
-        $this->messageThreadId = $this->config['levels'][$level->toPsrLogLevel()]['message_thread_id']
+        $this->messageThreadId = $this->config['levels'][$psrLogLevel]['message_thread_id']
             ?? $this->config['message_thread_id'];
 
-        $this->template = $this->config['levels'][$level->toPsrLogLevel()]['template']
+        $this->template = $this->config['levels'][$psrLogLevel]['template']
             ?? $this->config['template'];
 
         $this->options = array_merge(
             ['parse_mode' => 'html'],
             $this->config['options'] ?? [],
-            $this->config['levels'][$level->toPsrLogLevel()]['options'] ?? []
+            $this->config['levels'][$psrLogLevel]['options'] ?? []
         );
 
         if (!$this->token || !$this->chatId) {
@@ -67,9 +69,10 @@ class Handler extends AbstractProcessingHandler
             return;
         }
 
-        $this->_determineParams($record);
-
         try {
+
+            $this->_determineParams($record);
+
             $textChunks = str_split($this->formatText($record), 4096);
 
             foreach ($textChunks as $textChunk) {
@@ -112,29 +115,31 @@ class Handler extends AbstractProcessingHandler
 
     private function sendMessage(string $text): void
     {
-        $httpQuery = http_build_query(array_merge(
+        $payload = array_merge(
             [
                 'text' => $text,
                 'chat_id' => $this->chatId,
-                'message_thread_id' => $this->messageThreadId,
-                'parse_mode' => 'html',
             ],
             $this->options
-        ));
+        );
 
-        $url = self::TELEGRAM_API_HOST . '/bot' . $this->token . '/sendMessage?' . $httpQuery;
+        if ($this->messageThreadId !== null) {
+            $payload['message_thread_id'] = $this->messageThreadId;
+        }
+
+        $url = self::TELEGRAM_API_HOST . '/bot' . $this->token . '/sendMessage';
 
         $proxy = $this->config['proxy'] ?? null;
+        $timeout = (int)($this->config['timeout'] ?? 5);
 
-        if ($proxy) {
-            $context = stream_context_create([
-                'http' => [
-                    'proxy' => $proxy,
-                ],
-            ]);
-            file_get_contents($url, false, $context);
-        } else {
-            file_get_contents($url);
+        $job = Job::dispatch($url, $payload, $proxy, $timeout);
+
+        if (!empty($this->config['queue'])) {
+            $job->onQueue($this->config['queue']);
+        }
+
+        if (!empty($this->config['connection'])) {
+            $job->onConnection($this->config['connection']);
         }
     }
 }

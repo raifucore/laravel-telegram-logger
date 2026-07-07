@@ -59,7 +59,7 @@ class Handler extends AbstractProcessingHandler
         );
 
         if (!$this->token || !$this->chatId) {
-            throw new \InvalidArgumentException('token and chat_id are not defined');
+            throw new \InvalidArgumentException('token or chat_id are not defined');
         }
     }
 

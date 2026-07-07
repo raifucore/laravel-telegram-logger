@@ -17,7 +17,7 @@ return [
     ],
 
     // Proxy. Ex.: tcp://host:port or tcp://user:pass@host:port or socks5://user:pass@host:port
-    'proxy' => null,
+    'proxy' => env('TELEGRAM_LOGGER_PROXY'),
 
     // Queue settings for telegram logger jobs
     'queue' => env('TELEGRAM_LOGGER_QUEUE', 'default'),
@@ -45,13 +45,29 @@ return [
          * ],
          *
          */
-        'debug' => null,
-        'info' => null,
-        'notice' => null,
-        'warning' => null,
-        'error' => null,
-        'critical' => null,
-        'alert' => null,
-        'emergency' => null,
+        'debug' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_DEBUG_MESSAGE_THREAD_ID'),
+        ],
+        'info' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_INFO_MESSAGE_THREAD_ID'),
+        ],
+        'notice' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_NOTICE_MESSAGE_THREAD_ID'),
+        ],
+        'warning' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_WARNING_MESSAGE_THREAD_ID'),
+        ],
+        'error' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_ERROR_MESSAGE_THREAD_ID'),
+        ],
+        'critical' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_CRITICAL_MESSAGE_THREAD_ID'),
+        ],
+        'alert' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_ALERT_MESSAGE_THREAD_ID'),
+        ],
+        'emergency' => [
+            'message_thread_id' => env('TELEGRAM_LOGGER_EMERGENCY_MESSAGE_THREAD_ID'),
+        ],
     ],
 ];

@@ -85,7 +85,7 @@ class Handler extends AbstractProcessingHandler
 
     protected function getDefaultFormatter(): FormatterInterface
     {
-        return new LineFormatter("%message% %context% %extra%\n", null, false, true);
+        return new LineFormatter("%message% %context% %extra%\n", null, true, true);
     }
 
     private function formatText($record): string

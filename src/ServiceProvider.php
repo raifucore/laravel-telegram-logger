@@ -16,6 +16,8 @@ class ServiceProvider extends CoreServiceProvider
         $this->publishes([__DIR__ . '/../config/telegram_logger.php' => config_path('telegram_logger.php')], 'config');
 
         $this->_loadViews();
+
+        $this->_registerCommands();
     }
 
     private function _loadViews(): void
@@ -29,5 +31,12 @@ class ServiceProvider extends CoreServiceProvider
         $this->publishes([
             $viewsPath => resource_path('views/vendor/telegram_logger'),
         ], 'views');
+    }
+
+    private function _registerCommands(): void
+    {
+        $this->commands([
+            TestCommand::class,
+        ]);
     }
 }

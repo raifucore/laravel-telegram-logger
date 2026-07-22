@@ -70,4 +70,23 @@ return [
             'message_thread_id' => env('TELEGRAM_LOGGER_EMERGENCY_MESSAGE_THREAD_ID'),
         ],
     ],
+
+    // Named topics for targeted sending: Log::info('msg', ['telegram' => ['topic' => 'payments']])
+    // This section is fully optional.
+    'topics' => [
+        /**
+         * You can define named topics with the same override keys as 'levels'.
+         * Only 'message_thread_id' is required, all other keys are optional:
+         * - 'token' (optional, defaults to the root 'token')
+         * - 'chat_id' (optional, defaults to the root 'chat_id')
+         * - 'template' (optional, defaults to the root 'template')
+         * - 'options' (optional, merged over the root 'options')
+         * - 'duplicate' (optional, defaults to false) - when true, the message
+         *   is also sent to the level-based destination.
+         *
+         * 'payments' => [
+         *      'message_thread_id' => env('TELEGRAM_LOGGER_TOPIC_PAYMENTS'),
+         * ],
+         */
+    ],
 ];
